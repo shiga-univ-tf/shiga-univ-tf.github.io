@@ -51,7 +51,7 @@
 | [`records.html`](records.html) | **滋賀大記録**：トラック／フィールド／ロード・競歩／混成の男女別一覧と、各行・下部カードでの詳細表示（保持者・達成日・大会・会場） |
 | [`style.css`](style.css) | PC・スマートフォン共通のスタイルシート（レスポンシブ・iPhone実画面プレビューUI含む） |
 | [`app.js`](app.js) | メニュー開閉、タブ切り替え、FAQ、フォーム検証、GoogleスプレッドシートCSV同期、スマホ表示プレビュー機能 |
-| [`data.js`](data.js) | Googleスプレッドシート公開CSV URL（`googleSheetConfig`）およびお問い合わせ先設定（`contactConfig`） |
+| [`data.js`](data.js) | サイト基本設定（`siteConfig`）、公式SNS設定（`socialConfig`）、Googleスプレッドシート公開CSV URL（`googleSheetConfig`）、お問い合わせ先設定（`contactConfig`） |
 | [`assets/`](assets/) | トップ・新入生案内ページ用の画像アセット（PC / SP 用イメージ画像 7点） |
 
 ### 運用・開発用ファイル（GitHub Pages 公開対象外）

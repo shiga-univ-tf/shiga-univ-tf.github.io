@@ -11,6 +11,68 @@
  */
 
 document.addEventListener("DOMContentLoaded", () => {
+  const siteData = typeof SITE_DATA !== "undefined" ? SITE_DATA : {};
+  const APP_CONSTANTS = {
+    defaultTeamName: "滋賀大学陸上競技部",
+    defaultPreviewDomain: "shiga-univ-tf.jp",
+    defaultFallbackHref: "recruit.html",
+    emptyValuePlaceholder: "—",
+    defaultGradeKey: "1回生",
+    gradeKeys: ["1回生", "2回生", "3回生", "4回生", "院生"],
+    defaultRecordCategory: "track",
+    recordCategories: {
+      track: { label: "トラック種目", aliases: ["トラック", "track"] },
+      field: { label: "フィールド種目", aliases: ["フィールド", "field"] },
+      road: { label: "ロード・競歩種目", aliases: ["ロード・競歩", "road"] },
+      combined: { label: "混成・その他種目", aliases: ["混成", "combined"] }
+    },
+    headerFallbackHeight: 100,
+    hashScrollDelayMs: 30,
+    formAnnounceDelayMs: 350,
+    maxExtraPbColumns: 5,
+    previewDeviceSizes: {
+      iphone15: { width: 417, height: 876 },
+      iphone14: { width: 414, height: 868 },
+      iphonese: { width: 399, height: 767 }
+    }
+  };
+
+  // --------------------------------------------------------------------------
+  // 0. data.js のサイト設定（SNSリンク・連絡先表記）をDOMへ反映
+  // --------------------------------------------------------------------------
+  function applySiteConfig() {
+    const socialCfg = siteData.socialConfig || {};
+    const contactCfg = siteData.contactConfig || {};
+    const instagramCfg = socialCfg.instagram || {};
+
+    document.querySelectorAll("[data-instagram-campus]").forEach((link) => {
+      const campusKey = link.getAttribute("data-instagram-campus") || "";
+      const info = instagramCfg[campusKey];
+      if (!info) return;
+
+      if (info.url && /^https?:\/\//i.test(info.url.trim())) {
+        link.setAttribute("href", info.url.trim());
+      }
+
+      if (link.getAttribute("data-instagram-display") === "campus-handle") {
+        const labelEl = link.querySelector(".insta-link-text");
+        if (labelEl && info.campusLabel && info.handle) {
+          labelEl.textContent = `${info.campusLabel} ${info.handle} ↗`;
+        }
+      }
+    });
+
+    document.querySelectorAll("[data-contact-email-note], .form-dest-note").forEach((note) => {
+      if (contactCfg.yahooEmail) {
+        note.textContent = `送信先：部のYahoo!メール（${contactCfg.yahooEmail}）`;
+      } else if (contactCfg.endpointUrl) {
+        note.textContent = "送信先：部のお問い合わせ窓口（フォーム送信）";
+      }
+    });
+  }
+
+  applySiteConfig();
+
   // --------------------------------------------------------------------------
   // 1. スマホ版 開閉式メニュー (Header) ＆ ページ内スクロール位置調整（色の別れ目に合わせる）
   // --------------------------------------------------------------------------
@@ -20,7 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const headerNav = document.getElementById("header-nav");
 
   function getHeaderHeight() {
-    return siteHeader ? Math.ceil(siteHeader.getBoundingClientRect().height) : 100;
+    return siteHeader ? Math.ceil(siteHeader.getBoundingClientRect().height) : APP_CONSTANTS.headerFallbackHeight;
   }
 
   function syncHeaderHeightVar() {
@@ -103,7 +165,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (window.location.hash) {
     setTimeout(() => {
       scrollToSectionBoundary(window.location.hash, false);
-    }, 30);
+    }, APP_CONSTANTS.hashScrollDelayMs);
   }
 
   // --------------------------------------------------------------------------
@@ -202,7 +264,7 @@ document.addEventListener("DOMContentLoaded", () => {
         formAnnouncer.textContent = "";
         formAnnounceTimer = setTimeout(() => {
           formAnnouncer.textContent = errorEl.textContent.trim();
-        }, 350);
+        }, APP_CONSTANTS.formAnnounceDelayMs);
       }
     }
   }
@@ -300,7 +362,7 @@ document.addEventListener("DOMContentLoaded", () => {
           message: messageInput.value.trim()
         };
 
-        const cfg = (typeof SITE_DATA !== "undefined" && SITE_DATA.contactConfig) || {};
+        const cfg = siteData.contactConfig || {};
         btnSendFinal.disabled = true;
 
         try {
@@ -322,7 +384,8 @@ document.addEventListener("DOMContentLoaded", () => {
             resultBanner.innerHTML =
               "<strong>送信が完了しました。</strong><br>お問い合わせありがとうございます。内容を確認のうえ、担当者よりご連絡いたします。";
           } else if (cfg.yahooEmail) {
-            const subject = encodeURIComponent(`【滋賀大学陸上競技部HP お問い合わせ】${payload.name}様`);
+            const teamName = (siteData.siteConfig && siteData.siteConfig.teamName) || APP_CONSTANTS.defaultTeamName;
+            const subject = encodeURIComponent(`【${teamName}HP お問い合わせ】${payload.name}様`);
             const body = encodeURIComponent(
               `お名前: ${payload.name}\nメールアドレス: ${payload.email}\n\nお問い合わせ内容:\n${payload.message}`
             );
@@ -377,11 +440,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function safeHref(rawUrl) {
     const trimmed = String(rawUrl || "").trim();
-    if (!trimmed) return "recruit.html";
+    if (!trimmed) return APP_CONSTANTS.defaultFallbackHref;
     if (/^(https?:\/\/|\/|\.\/|[a-zA-Z0-9_-]+\.html(#.*)?$|#)/.test(trimmed)) {
       return escapeHtml(trimmed);
     }
-    return "recruit.html";
+    return APP_CONSTANTS.defaultFallbackHref;
   }
 
   function setupTablist(tabs, panelEl, onSelect) {
@@ -440,7 +503,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const ev = String(raw.event || fallbackEvent || "").trim();
         const val = String(raw.value || "").trim();
         if (val || ev) {
-          items.push({ event: ev, value: val || "—" });
+          items.push({ event: ev, value: val || APP_CONSTANTS.emptyValuePlaceholder });
         }
         return;
       }
@@ -476,7 +539,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     if (items.length === 0) {
-      return [{ event: String(fallbackEvent || "").trim(), value: "—" }];
+      return [{ event: String(fallbackEvent || "").trim(), value: APP_CONSTANTS.emptyValuePlaceholder }];
     }
     return items;
   }
@@ -499,9 +562,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderMembersForGrade(gradeKey) {
-    if (!membersCardsGrid || typeof SITE_DATA === "undefined" || !SITE_DATA.membersByGrade) return;
+    if (!membersCardsGrid || !siteData.membersByGrade) return;
 
-    const list = SITE_DATA.membersByGrade[gradeKey] || [];
+    const list = siteData.membersByGrade[gradeKey] || [];
     if (membersGradeHeading) {
       membersGradeHeading.textContent = gradeKey === "院生" ? "大学院生（院生）" : gradeKey;
     }
@@ -567,7 +630,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (gradeTabs.length > 0 && membersCardsGrid) {
     setupTablist(Array.from(gradeTabs), membersPanel, (tab) => {
-      const gradeKey = tab.getAttribute("data-grade-tab") || "1回生";
+      const gradeKey = tab.getAttribute("data-grade-tab") || APP_CONSTANTS.defaultGradeKey;
       renderMembersForGrade(gradeKey);
     });
   }
@@ -591,17 +654,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const detailPlace = document.getElementById("detail-place");
   const detailCloseBtn = document.getElementById("detail-close-btn");
 
-  let currentRecordCategory = "track";
+  let currentRecordCategory = APP_CONSTANTS.defaultRecordCategory;
 
   function updateDetailCard(genderLabel, item) {
     if (!item || !recordDetailCard) return;
     recordDetailCard.style.display = "flex";
     if (detailEventTitle) detailEventTitle.textContent = `${genderLabel} ${item.event}`;
     if (detailRecordValue) detailRecordValue.textContent = item.record;
-    if (detailHolder) detailHolder.textContent = item.holder || "—";
-    if (detailDate) detailDate.textContent = item.date || "—";
-    if (detailTournament) detailTournament.textContent = item.tournament || "—";
-    if (detailPlace) detailPlace.textContent = item.place || "—";
+    if (detailHolder) detailHolder.textContent = item.holder || APP_CONSTANTS.emptyValuePlaceholder;
+    if (detailDate) detailDate.textContent = item.date || APP_CONSTANTS.emptyValuePlaceholder;
+    if (detailTournament) detailTournament.textContent = item.tournament || APP_CONSTANTS.emptyValuePlaceholder;
+    if (detailPlace) detailPlace.textContent = item.place || APP_CONSTANTS.emptyValuePlaceholder;
   }
 
   function renderRecordList(container, items, genderLabel, selectFirstByDefault) {
@@ -628,10 +691,10 @@ document.addEventListener("DOMContentLoaded", () => {
               <span class="record-row-plus" aria-hidden="true">${isFirstSelected ? "−" : "＋"}</span>
             </button>
             <div id="${inlineId}" class="record-inline-detail${isFirstSelected ? " is-open" : ""}">
-              <div class="record-inline-line"><span>記録保持者</span><strong>${escapeHtml(item.holder || "—")}</strong></div>
-              <div class="record-inline-line"><span>達成日</span><span>${escapeHtml(item.date || "—")}</span></div>
-              <div class="record-inline-line"><span>大会</span><span>${escapeHtml(item.tournament || "—")}</span></div>
-              <div class="record-inline-line"><span>会場</span><span>${escapeHtml(item.place || "—")}</span></div>
+              <div class="record-inline-line"><span>記録保持者</span><strong>${escapeHtml(item.holder || APP_CONSTANTS.emptyValuePlaceholder)}</strong></div>
+              <div class="record-inline-line"><span>達成日</span><span>${escapeHtml(item.date || APP_CONSTANTS.emptyValuePlaceholder)}</span></div>
+              <div class="record-inline-line"><span>大会</span><span>${escapeHtml(item.tournament || APP_CONSTANTS.emptyValuePlaceholder)}</span></div>
+              <div class="record-inline-line"><span>会場</span><span>${escapeHtml(item.place || APP_CONSTANTS.emptyValuePlaceholder)}</span></div>
             </div>
           </div>
         `;
@@ -672,8 +735,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderRecordsCategory(catKey) {
-    if (typeof SITE_DATA === "undefined" || !SITE_DATA.recordsByCategory) return;
-    const catData = SITE_DATA.recordsByCategory[catKey];
+    if (!siteData.recordsByCategory) return;
+    const catData = siteData.recordsByCategory[catKey];
     if (!catData) return;
 
     currentRecordCategory = catKey;
@@ -696,7 +759,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderRecordsCategory(currentRecordCategory);
 
     setupTablist(Array.from(recordCatTabs), recordsPanel, (tab) => {
-      const catKey = tab.getAttribute("data-record-cat") || "track";
+      const catKey = tab.getAttribute("data-record-cat") || APP_CONSTANTS.defaultRecordCategory;
       renderRecordsCategory(catKey);
     });
 
@@ -774,8 +837,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function getCurrentAcademicYear() {
-    if (typeof SITE_DATA !== "undefined" && SITE_DATA.googleSheetConfig && SITE_DATA.googleSheetConfig.currentAcademicYear) {
-      return Number(SITE_DATA.googleSheetConfig.currentAcademicYear);
+    if (siteData.googleSheetConfig && siteData.googleSheetConfig.currentAcademicYear) {
+      return Number(siteData.googleSheetConfig.currentAcademicYear);
     }
     const now = new Date();
     const year = now.getFullYear();
@@ -784,8 +847,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function syncFromGoogleSheets() {
-    if (typeof SITE_DATA === "undefined" || !SITE_DATA.googleSheetConfig) return;
-    const sheetCfg = SITE_DATA.googleSheetConfig;
+    if (!siteData.googleSheetConfig) return;
+    const sheetCfg = siteData.googleSheetConfig;
 
     // ① お知らせシートの同期
     const topNewsListEl = document.getElementById("top-news-list");
@@ -800,7 +863,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const cat = escapeHtml(row["カテゴリ"] || row["category"] || "お知らせ");
                 const title = escapeHtml(row["タイトル"] || row["title"] || "");
                 const status = escapeHtml(row["状態・日付"] || row["statusText"] || "詳細を見る →");
-                const href = safeHref(row["リンク先"] || row["href"] || "recruit.html");
+                const href = safeHref(row["リンク先"] || row["href"] || APP_CONSTANTS.defaultFallbackHref);
                 return `
                   <a href="${href}" class="news-row">
                     <span class="news-cat">${cat}</span>
@@ -825,13 +888,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const rows = parseCsv(await res.text());
           if (rows.length > 0) {
             const academicYear = getCurrentAcademicYear();
-            const grouped = {
-              "1回生": [],
-              "2回生": [],
-              "3回生": [],
-              "4回生": [],
-              "院生": []
-            };
+            const grouped = Object.fromEntries(APP_CONSTANTS.gradeKeys.map((key) => [key, []]));
 
             rows.forEach((row) => {
               const course = (row["課程・区分"] || row["区分"] || "学部").trim();
@@ -873,7 +930,7 @@ document.addEventListener("DOMContentLoaded", () => {
               const rawPbTexts = [
                 row["自己ベスト"] || row["PB"] || row["パーソナルベスト"] || ""
               ];
-              for (let n = 2; n <= 5; n++) {
+              for (let n = 2; n <= APP_CONSTANTS.maxExtraPbColumns; n++) {
                 const extraPb =
                   row[`自己ベスト${n}`] || row[`PB${n}`] || row[`パーソナルベスト${n}`];
                 if (extraPb) rawPbTexts.push(extraPb);
@@ -881,15 +938,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
               const hasTextPb = rawPbTexts.some((t) => String(t || "").trim() !== "");
               const pbList = hasTextPb ? parseMemberPbs(rawPbTexts, fallbackEvent) : [];
-              for (let n = 1; n <= 5; n++) {
+              for (let n = 1; n <= APP_CONSTANTS.maxExtraPbColumns; n++) {
                 const evCol = String(row[`種目${n}`] || "").trim();
                 const recCol = String(row[`記録${n}`] || "").trim();
                 if (evCol || recCol) {
-                  pbList.push({ event: evCol || fallbackEvent, value: recCol || "—" });
+                  pbList.push({ event: evCol || fallbackEvent, value: recCol || APP_CONSTANTS.emptyValuePlaceholder });
                 }
               }
               if (pbList.length === 0 && !roleInfo.isManager) {
-                pbList.push({ event: fallbackEvent, value: "—" });
+                pbList.push({ event: fallbackEvent, value: APP_CONSTANTS.emptyValuePlaceholder });
               }
 
               const pbEvents = Array.from(new Set(pbList.map((p) => p.event).filter(Boolean)));
@@ -908,16 +965,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 kana: row["フリガナ"] || row["カナ"] || "",
                 name: row["氏名"] || row["名前"] || "",
                 facultyGrade: faculty ? `${faculty}  /  ${displayGrade}` : displayGrade,
-                highSchool: row["出身高校"] || "—",
+                highSchool: row["出身高校"] || APP_CONSTANTS.emptyValuePlaceholder,
                 fallbackEvent,
                 pbList,
                 comment: formattedComment
               });
             });
 
-            SITE_DATA.membersByGrade = grouped;
+            siteData.membersByGrade = grouped;
             const activeTab = document.querySelector(".grade-tab.is-active");
-            const activeGrade = (activeTab && activeTab.getAttribute("data-grade-tab")) || "1回生";
+            const activeGrade = (activeTab && activeTab.getAttribute("data-grade-tab")) || APP_CONSTANTS.defaultGradeKey;
             renderMembersForGrade(activeGrade);
           }
         }
@@ -933,27 +990,18 @@ document.addEventListener("DOMContentLoaded", () => {
         if (res.ok) {
           const rows = parseCsv(await res.text());
           if (rows.length > 0) {
-            const catMap = {
-              トラック: "track",
-              track: "track",
-              フィールド: "field",
-              field: "field",
-              "ロード・競歩": "road",
-              road: "road",
-              混成: "combined",
-              combined: "combined"
-            };
-
-            const nextRecords = {
-              track: { label: "トラック種目", men: [], women: [] },
-              field: { label: "フィールド種目", men: [], women: [] },
-              road: { label: "ロード・競歩種目", men: [], women: [] },
-              combined: { label: "混成・その他種目", men: [], women: [] }
-            };
+            const catMap = {};
+            const nextRecords = {};
+            Object.entries(APP_CONSTANTS.recordCategories).forEach(([key, def]) => {
+              def.aliases.forEach((alias) => {
+                catMap[alias] = key;
+              });
+              nextRecords[key] = { label: def.label, men: [], women: [] };
+            });
 
             rows.forEach((row) => {
               const rawCat = (row["カテゴリ"] || "トラック").trim();
-              const catKey = catMap[rawCat] || "track";
+              const catKey = catMap[rawCat] || APP_CONSTANTS.defaultRecordCategory;
               const gender = (row["性別"] || "男子").trim();
               const targetArr = gender.includes("女") ? nextRecords[catKey].women : nextRecords[catKey].men;
 
@@ -967,7 +1015,7 @@ document.addEventListener("DOMContentLoaded", () => {
               });
             });
 
-            SITE_DATA.recordsByCategory = nextRecords;
+            siteData.recordsByCategory = nextRecords;
             renderRecordsCategory(currentRecordCategory);
           }
         }
@@ -994,6 +1042,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (previewBtn && previewModal && window.self === window.top) {
+    const previewDomain =
+      (siteData.siteConfig && siteData.siteConfig.previewDomain) || APP_CONSTANTS.defaultPreviewDomain;
     // 既存のモーダル内部を iPhone 実機シミュレーター構造へアップグレード
     previewModal.innerHTML = `
       <div class="mobile-preview-toolbar">
@@ -1053,9 +1103,9 @@ document.addEventListener("DOMContentLoaded", () => {
             <!-- 下部 iOS Safari アドレスバー・ナビバー・ホームインジケーター -->
             <div class="ios-safari-bottom">
               <div class="ios-address-pill">
-                <span style="font-size: 11px; color: #587084;">ぁあ</span>
-                <span id="ios-address-text" class="ios-address-domain">🔒 shiga-univ-tf.jp</span>
-                <button type="button" id="ios-reload-btn" title="再読み込み" style="background:none;border:none;cursor:pointer;font-size:13px;color:#142e48;">↻</button>
+                <span style="font-size: 11px; color: var(--text-muted);">ぁあ</span>
+                <span id="ios-address-text" class="ios-address-domain">🔒 ${escapeHtml(previewDomain)}</span>
+                <button type="button" id="ios-reload-btn" title="再読み込み" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--text-dark);">↻</button>
               </div>
               <div class="ios-nav-icons" aria-hidden="true">
                 <span>‹</span>
@@ -1093,11 +1143,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!deviceFrame || !iphoneStage || !previewModal.open) return;
       const stageRect = iphoneStage.getBoundingClientRect();
       const model = deviceFrame.getAttribute("data-model") || "iphone15";
-      const naturalH = model === "iphonese" ? 767 : model === "iphone14" ? 868 : 876;
-      const naturalW = model === "iphonese" ? 399 : model === "iphone14" ? 414 : 417;
+      const deviceSize = APP_CONSTANTS.previewDeviceSizes[model] || APP_CONSTANTS.previewDeviceSizes.iphone15;
 
-      const scaleH = (stageRect.height - 16) / naturalH;
-      const scaleW = (stageRect.width - 16) / naturalW;
+      const scaleH = (stageRect.height - 16) / deviceSize.height;
+      const scaleW = (stageRect.width - 16) / deviceSize.width;
       const scale = Math.min(1, Math.max(0.5, Math.min(scaleH, scaleW)));
       deviceFrame.style.setProperty("--device-scale", scale.toFixed(3));
     }
@@ -1132,9 +1181,9 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
           const loc = previewIframe.contentWindow.location;
           const pageName = loc.pathname.split("/").pop() || "index.html";
-          addressText.textContent = `🔒 shiga-univ-tf.jp/${pageName === "index.html" ? "" : pageName}`;
+          addressText.textContent = `🔒 ${previewDomain}/${pageName === "index.html" ? "" : pageName}`;
         } catch (err) {
-          addressText.textContent = "🔒 shiga-univ-tf.jp";
+          addressText.textContent = `🔒 ${previewDomain}`;
         }
       });
     }
