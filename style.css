@@ -1398,6 +1398,11 @@ main {
   font-size: 13px;
 }
 
+.confirm-lead {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
 .confirm-item strong {
   display: block;
   font-size: 11px;
@@ -1405,10 +1410,18 @@ main {
   margin-bottom: 2px;
 }
 
+.confirm-item-multiline {
+  white-space: pre-wrap;
+}
+
 .confirm-actions {
   display: flex;
   gap: 12px;
   width: 100%;
+}
+
+.confirm-actions .form-submit-btn {
+  flex: 1;
 }
 
 .btn-secondary {
